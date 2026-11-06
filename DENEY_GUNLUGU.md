@@ -88,6 +88,54 @@ Not: GPU çıktısında sadece son checkpoint geldi (`kaydet_her: 10` ara checkp
 **Rakamlara göre önde:** Model A (%72.7 vs %63.4). Aşama 3 tahmini (B kazanır) metrikte doğrulanmadı. Olası sebep: B'nin sentetiği kulakla elenmedi (metalik/bozuk parçalar dahil). Son karar CoverArena'da.
 
 ## Aşama 5 — CoverArena
+**Atlandı (Zehra'nın kararı, 25 Ekim).** Kör dinleme testi yapılmadı; kazanan metriğe göre seçildi: **Model A** (Ses benzerliği %72.7 vs B %63.4).
+Zorunlu gereksinim "CoverArena: en az 10 dinleyici × 3 bölüm" karşılanmadı. Arena yapılırsa ve oylar B derse, kural gereği oylar kazanır ve cover yeniden üretilir.
 
 ## Aşama 6 — Cover ve deploy
+**Miks (`miksle.py`):** Model A, Üzülmedin mi'nin tam kuru vokali (rmvpe, index 0.5, protect 0.33, volume_envelope 0.25, split_audio, autotune kapalı).
+Vokal zinciri (pedalboard): high-pass 90 Hz, 3 kHz −2 dB, 6.5 kHz −3 dB, kompresör 3:1, +2 dB air shelf (10 kHz), %20 reverb.
+Seviye orijinal vokale eşitlendi (pyloudnorm), enstrüman + orijinal arka vokallerle toplandı. Master: −14.0 LUFS, tepe −1.5 dB
+(pedalboard Limiter makeup kazancı eklediği için kendi tepe limiterimiz kullanıldı).
 
+**Nakarat:** 81.5–111.5 sn (30 sn, 1 sn fade). Orijinal ve AI klibi aynı işlemle, ikisi de −13.2 LUFS.
+**Tam cover (özel):** `outputs/cover/cover_simge_uzulmedin_mi_A_tam.wav` → Drive'a yüklenecek.
+**Cover Player (`web/`, Next.js 14):** iki senkron oynatıcı, tek tuşla orijinal ↔ AI, "Yapay zekâ ile üretilmiştir" etiketi, krediler, model kartı, `noindex, nofollow`.
+**Vercel linki:** _deploy bekleniyor_
+
+
+## Ödev — 3 cover'ı iyileştir (6 Kasım)
+**Cover'lar (hepsi Model A, Dua Lipa sesi):** Simge – Üzülmedin mi, Hadise – Sıfır Tolerans, Hadise – Düm Tek Tek.
+Hadise şarkılarında Model B kullanılmadı: B, bu şarkıların Seed-VC versiyonlarıyla eğitildi, skor şişer.
+GPU kullanılmadı; tüm çeviriler CPU'da (`outputs/odev/`). Baz = Aşama 6 ayarları (index 0.5, protect 0.33, pitch 0, rmvpe).
+Varyantlar bazdan **tek** parametre değiştirir (`outputs/odev/varyant.py`), dinleme sayfası `outputs/odev/dinle_odev.py` (7860).
+
+| Kesit | baz | index 0.75 | index 1.0 | protect 0.5 | protect 0.2 |
+|---|---|---|---|---|---|
+| Üzülmedin mi, nakarat 81.5–111.5 sn | 85.0 | 96.7 | 100.1 | 87.2 | 87.4 |
+| Sıfır Tolerans, 95–135 sn | 56.1 | 59.2 | 63.3 | 56.5 | 60.1 |
+| Düm Tek Tek, 28–68 sn | 96.6 | 95.8 | 94.9 | 96.4 | 101.6 |
+
+(Ses benzerliği medyanı, %; 0 = orijinal şarkıcı, 100 = Dua'nın test kaydı. Hiçbir varyant nota doğruluğunu değiştirmedi.)
+
+**Üzülmedin mi — dinleme (Zehra):** Bütün numaralar birbirine benziyor, hiçbirinde tam olarak Dua Lipa'nın sesini duymuyorum; en iyisi 3 (index_rate 1.0).
+→ Seçim: **index_rate 0.5 → 1.0**. Metrikte nakarat %85.0 → %100.1; kulakta fark küçük.
+
+**Sıfır Tolerans — dinleme (Zehra):** 1 (baz) ve 2 (index 0.75) Hadise'nin neredeyse birebir aynısı. En iyi 3 (index 1.0); 4 (protect 0.5) fena değil; 5 (protect 0.2) yine 1 ve 2'ye benziyor.
+→ Seçim: **index_rate 0.5 → 1.0**. Metrikte 95–135 sn %56.1 → %63.3 (alt çeyrek 45 → 53). Kulak ve metrik aynı sırayı veriyor (3 > 2, 5 ≈ 1); tek ayrılık 4: kulakta iyi, metrikte baz kadar (%56.5).
+
+**Düm Tek Tek — dinleme (Zehra):** Genel olarak en başarılı cover. 5 (protect 0.2) diğer şarkılara kıyasla çok başarılı, ama en çok 1 (baz) beğenildi.
+→ Çeviri ayarı değişmiyor (baz). İyileştirme miks tarafında aranacak (vokal seviyesi / reverb, tek tek).
+
+**Düm Tek Tek — miks (Zehra):** A (ilk miks: vokal = orijinal seviye, reverb %20) en iyi, ikinci B (vokal +3 dB). C, D, E daha kötü.
+→ İlk versiyon tutuldu. Denenen tek değişikliklerin (protect 0.2, index 0.75/1.0, vokal ±3 dB, reverb %10/%35) hiçbiri ilkini geçmedi.
+
+**Önce → sonra (tam şarkı, Model A):** Üzülmedin mi %72.7 → %77.3; Sıfır Tolerans %69.6 → %75.2; Düm Tek Tek %91.3 (değişmedi).
+40 sn kliplerde ~10 pencere var, medyan birkaç puan oynuyor (Sıfır Tolerans klibi tam şarkı çevirisinde %63.6 → %55.5 çıktı), bu yüzden notlarda tam şarkı rakamları.
+Zehra (miksli klipler): iki şarkıda da "sonra" daha iyi; kliplerde nakarat var.
+**Teslim:** `outputs/odev/teslim/covers.zip` = cover1 (Üzülmedin mi 1:16–1:56), cover2 (Sıfır Tolerans 1:35–2:15), cover3 (Düm Tek Tek 0:28–1:08), 40 sn, 192 kbps + `notes.txt`. 2.9 MB.
+
+## Ödev — Cover'lar web'de (6 Kasım)
+**Fikir (Zehra):** "Kim söylüyor?" oyunu. Her şarkıda A/B: biri orijinal şarkıcı, biri AI Dua Lipa (taraf rastgele). "Dua Lipa bu" → cevap + ses benzerliği; sonda skor ve 3 cover'ın tamamı.
+**Klipler (`web/public/clips/`, `outputs/odev/web_klipler.py`):** 30 sn, 192 kbps; cover ve orijinal aynı saniyeler: Üzülmedin mi 1:21–1:51, Sıfır Tolerans 1:40–2:10, Düm Tek Tek 0:33–1:03.
+**Etiket:** cevaptan önce her iki klipte "İkisinden biri yapay zekâ ile üretilmiştir, Dua Lipa bu şarkıyı söylemedi" (cevabı ele vermesin diye); cevaptan sonra AI klipte tam etiket. Krediler, noindex, GitHub linki altta.
+Repo public yapıldı (geçmişte ses/model/anahtar yok, kontrol edildi).

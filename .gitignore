@@ -20,7 +20,7 @@ pretrained_models/
 *.onnx
 *.pt
 *.npy
-!web/public/*.mp3
+!web/public/clips/*.mp3
 tools/
 girdi_B/
 synth/
