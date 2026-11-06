@@ -11,9 +11,20 @@ const SARKILAR = [
   { id: "cover3", sarki: "Düm Tek Tek", sanatci: "Hadise", benzerlik: 91.3 },
 ];
 
-const klip = (s, ai) => `/clips/${s.id}${ai ? "" : "_orijinal"}.mp3`;
+const klip = (s, ai) => `clips/${s.id}${ai ? "" : "_orijinal"}.mp3`;
+const yuzde = (x) => `%${x.toLocaleString("tr-TR")}`;
 
-function Oynatici({ src, harf, oynayan, setOynayan, children, durum }) {
+function Serit() {
+  const metin = "Yapay zekâ ile üretilmiştir ✦ Dua Lipa bu şarkıları söylemedi ✦ ";
+  return (
+    <div className="serit" role="note" aria-label="Yapay zekâ ile üretilmiştir. Dua Lipa bu şarkıları söylemedi.">
+      <div className="serit-ic" aria-hidden="true">{metin.repeat(6)}</div>
+    </div>
+  );
+}
+
+// dönen plak: tıklayınca çalar; halka ilerlemeyi, damga cevabı gösterir
+function Plak({ src, harf, renk, oynayan, setOynayan, damga, kucuk }) {
   const ses = useRef(null);
   const [oran, setOran] = useState(0);
   const caliyor = oynayan === src;
@@ -33,20 +44,23 @@ function Oynatici({ src, harf, oynayan, setOynayan, children, durum }) {
     return () => { a.removeEventListener("timeupdate", tick); a.removeEventListener("ended", bitti); };
   }, [src, setOynayan]);
 
-  const R = 34, C = 2 * Math.PI * R;
+  const R = 48, C = 2 * Math.PI * R;
   return (
-    <div className={`kayit ${durum || ""}`}>
-      <button className="disk" onClick={() => setOynayan(caliyor ? null : src)}
-              aria-label={`${harf} kaydını ${caliyor ? "durdur" : "çal"}`}>
-        <svg viewBox="0 0 80 80" aria-hidden="true">
-          <circle cx="40" cy="40" r={R} className="halka-iz" />
-          <circle cx="40" cy="40" r={R} className="halka" strokeDasharray={C} strokeDashoffset={C * (1 - oran)} />
+    <div className={`deck ${kucuk ? "kucuk" : ""} ${caliyor ? "caliyor" : ""}`} style={{ "--renk": renk }}>
+      <button className="plak-dugme" onClick={() => setOynayan(caliyor ? null : src)}
+              aria-label={`${harf} kaydını ${caliyor ? "durdur" : "çal"}`} aria-pressed={caliyor}>
+        <svg className="halka" viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r={R} className="halka-iz" />
+          <circle cx="50" cy="50" r={R} className="halka-dolu" strokeDasharray={C} strokeDashoffset={C * (1 - oran)} />
         </svg>
-        <span className="harf">{harf}</span>
-        <span className="ikon" aria-hidden="true">{caliyor ? "❚❚" : "▶"}</span>
+        <span className="plak">
+          <span className="plak-orta"><b>{harf}</b><i>{caliyor ? "❚❚" : "▶"}</i></span>
+        </span>
+        <span className="kol" aria-hidden="true" />
+        {damga && <span className={`damga ${damga}`}>{damga === "ai" ? "Yapay zekâ" : "Gerçek"}</span>}
       </button>
+      <span className="eq" aria-hidden="true"><i /><i /><i /><i /><i /></span>
       <audio ref={ses} src={src} preload="metadata" />
-      {children}
     </div>
   );
 }
@@ -61,13 +75,14 @@ export default function Page() {
   const basla = () => {
     setAiSolda(SARKILAR.map(() => Math.random() < 0.5));
     setCevaplar([]); setTur(0); setOynayan(null); setEkran("tur");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const s = SARKILAR[tur];
   const cevap = cevaplar[tur];
   const cevaplandi = cevap !== undefined;
   const taraflar = ekran === "tur"
-    ? [{ harf: "A", ai: aiSolda[tur] }, { harf: "B", ai: !aiSolda[tur] }]
+    ? [{ harf: "A", renk: "var(--a)", ai: aiSolda[tur] }, { harf: "B", renk: "var(--b)", ai: !aiSolda[tur] }]
     : [];
 
   const sec = (ai) => { if (!cevaplandi) setCevaplar((c) => { const y = [...c]; y[tur] = ai; return y; }); };
@@ -78,98 +93,109 @@ export default function Page() {
   const skor = cevaplar.filter(Boolean).length;
 
   return (
-    <main>
-      <header className="ust">
-        <p className="ust-etiket">Ses klonlama oyunu</p>
-        <h1>Kim söylüyor?</h1>
-      </header>
+    <>
+      <Serit />
+      <main>
+        {ekran === "giris" && (
+          <section className="giris">
+            <div className="giris-plaklar" aria-hidden="true"><span /><span /></div>
+            <p className="ust-yazi">Ses klonlama oyunu · 3 şarkı</p>
+            <h1>Kim<br />söylü&shy;yor?</h1>
+            <p className="giris-metin">
+              Her şarkıda iki plak var. Biri şarkının gerçek sahibi, diğeri <mark>yapay zekâyla klonlanmış Dua Lipa</mark>.
+              Dinle, sahteyi bul.
+            </p>
+            <button className="ana" onClick={basla}>Plakları çevir →</button>
+            <p className="ipucu">🎧 Kulaklıkla daha zor</p>
+          </section>
+        )}
 
-      {ekran === "giris" && (
-        <section className="kart giris">
-          <p className="buyuk">Her şarkıda iki kayıt var. Biri şarkının gerçek sahibi, diğeri <b>yapay zekâyla klonlanmış Dua Lipa sesi</b>.</p>
-          <p>Dinle ve hangisinin Dua Lipa olduğunu bul. 3 şarkı, 30'ar saniye.</p>
-          <div className="etiket">Bu sitedeki kayıtların yarısı yapay zekâ ile üretilmiştir. Dua Lipa bu şarkıları söylemedi.</div>
-          <button className="ana" onClick={basla}>Başla</button>
-          <p className="kucuk">Kulaklıkla daha zor 🎧</p>
-        </section>
-      )}
-
-      {ekran === "tur" && (
-        <section className="kart">
-          <div className="ilerleme" aria-label={`Şarkı ${tur + 1} / ${SARKILAR.length}`}>
-            {SARKILAR.map((_, i) => (
-              <span key={i} className={i < tur ? (cevaplar[i] ? "dogru" : "yanlis") : i === tur ? "simdi" : ""} />
-            ))}
-          </div>
-          <p className="sarki-baslik">“{s.sarki}”</p>
-          <p className="sub">Şarkı: {s.sanatci}</p>
-
-          <div className="ikili">
-            {taraflar.map(({ harf, ai }) => (
-              <Oynatici key={`${tur}-${harf}`} src={klip(s, ai)} harf={harf} oynayan={oynayan} setOynayan={setOynayan}
-                        durum={cevaplandi ? (ai ? "ai" : "orijinal") : ""}>
-                {!cevaplandi ? (
-                  <button className="sec" onClick={() => sec(ai)}>Dua Lipa bu</button>
-                ) : ai ? (
-                  <p className="kim">Dua Lipa sesi <small>yapay zekâ</small></p>
-                ) : (
-                  <p className="kim">{s.sanatci} <small>orijinal kayıt</small></p>
-                )}
-                <p className="klip-etiket">{cevaplandi && !ai ? "Gerçek kayıt" : cevaplandi ? ETIKET : "İkisinden biri yapay zekâ ile üretilmiştir, Dua Lipa bu şarkıyı söylemedi"}</p>
-              </Oynatici>
-            ))}
-          </div>
-
-          {cevaplandi && (
-            <div className={`sonuc ${cevap ? "dogru" : "yanlis"}`} role="status">
-              <p className="sonuc-baslik">{cevap ? "Bildin!" : "Kandırdı!"}</p>
-              <p>Ses benzerliği ölçümüne göre bu klonlanmış ses Dua Lipa'ya <b>%{s.benzerlik.toLocaleString("tr-TR")}</b> benziyor
-                (%0 = {s.sanatci}, %100 = Dua Lipa'nın kendi kaydı).</p>
-              <button className="ana" onClick={sonraki}>{tur + 1 < SARKILAR.length ? "Sıradaki şarkı →" : "Sonucu gör →"}</button>
+        {ekran === "tur" && (
+          <section className="tur">
+            <div className="tur-ust">
+              <span className="tur-no">Tur {tur + 1}/{SARKILAR.length}</span>
+              <span className="pipler" aria-hidden="true">
+                {SARKILAR.map((_, i) => (
+                  <i key={i} className={i < tur || (i === tur && cevaplandi) ? (cevaplar[i] ? "dogru" : "yanlis") : i === tur ? "simdi" : ""} />
+                ))}
+              </span>
             </div>
-          )}
-        </section>
-      )}
+            <h2 className="sarki">“{s.sarki}”</h2>
+            <p className="kimin">şarkının sahibi: <b>{s.sanatci}</b></p>
+            <p className="soru">{cevaplandi ? " " : "Hangisi Dua Lipa?"}</p>
 
-      {ekran === "son" && (
-        <>
-          <section className="kart son">
-            <p className="skor">{skor}<span>/{SARKILAR.length}</span></p>
-            <p className="buyuk">{skor === 3 ? "Kulağın keskin, yapay zekâ seni kandıramadı." : skor === 0 ? "Yapay zekâ seni her seferinde kandırdı." : "Bazılarında yapay zekâ seni kandırdı."}</p>
-            <p className="sub">Bu sesleri yapan ben bile Simge ile yapay zekâ Dua Lipa'yı kulakla zor ayırt ettim.</p>
-            <button className="ana" onClick={basla}>Tekrar oyna</button>
-          </section>
-
-          <section className="kart">
-            <h2>Üç cover</h2>
-            {SARKILAR.map((x) => (
-              <div key={x.id} className="liste-satir">
-                <p><b>Dua Lipa</b>, {x.sanatci}'nin “{x.sarki}” şarkısını söylüyor</p>
-                <div className="ikili kucuk-ikili">
-                  <Oynatici src={klip(x, false)} harf="O" oynayan={oynayan} setOynayan={setOynayan} durum="orijinal">
-                    <p className="kim">{x.sanatci} <small>orijinal</small></p>
-                  </Oynatici>
-                  <Oynatici src={klip(x, true)} harf="AI" oynayan={oynayan} setOynayan={setOynayan} durum="ai">
-                    <p className="kim">Dua Lipa sesi <small>%{x.benzerlik.toLocaleString("tr-TR")} benzerlik</small></p>
-                    <p className="klip-etiket">{ETIKET}</p>
-                  </Oynatici>
+            <div className="decks">
+              {taraflar.map(({ harf, renk, ai }) => (
+                <div key={`${tur}-${harf}`} className="deck-kolon">
+                  <Plak src={klip(s, ai)} harf={harf} renk={renk} oynayan={oynayan} setOynayan={setOynayan}
+                        damga={cevaplandi ? (ai ? "ai" : "gercek") : null} />
+                  {!cevaplandi ? (
+                    <button className="sec" onClick={() => sec(ai)}>Dua Lipa bu</button>
+                  ) : (
+                    <p className={`kim ${ai ? "ai" : ""}`}>{ai ? "Dua Lipa klonu" : s.sanatci}</p>
+                  )}
+                  <p className="klip-etiket">
+                    {!cevaplandi ? "İkisinden biri yapay zekâ ile üretilmiştir, Dua Lipa bu şarkıyı söylemedi" : ai ? ETIKET : "Orijinal kayıt"}
+                  </p>
                 </div>
-              </div>
-            ))}
-          </section>
-        </>
-      )}
+              ))}
+            </div>
 
-      <footer className="kart alt">
-        <h2>Krediler</h2>
-        <dl>
-          <dt>Şarkılar</dt><dd>“Üzülmedin mi”, Simge Sağın · “Sıfır Tolerans”, Hadise · “Düm Tek Tek”, Hadise. Tüm hakları sahiplerine aittir.</dd>
-          <dt>Klonlanan ses</dt><dd>Dua Lipa, <i>Future Nostalgia</i> (2020) stüdyo kayıtlarından ayrılmış vokaller</dd>
-          <dt>Model</dt><dd>RVC v2 (Applio), ~15 dk gerçek vokalle eğitildi. Model ve tam şarkılar yayınlanmaz; sitede yalnızca 30 saniyelik klipler var.</dd>
-          <dt>Kullanım</dt><dd>Exposure AI Academy ders projesi, eğitim amaçlı, ticari değil.</dd>
-        </dl>
-        <p className="kucuk">Zehra Karadayı · <a href={REPO}>GitHub: {REPO.replace("https://", "")}</a></p>
+            {cevaplandi && (
+              <div className={`sonuc ${cevap ? "dogru" : "yanlis"}`} role="status">
+                <p className="sonuc-baslik">{cevap ? "Yakaladın!" : "Kandırıldın!"}</p>
+                <p className="sonuc-metin">Klon bu şarkıda Dua Lipa'ya <b>{yuzde(s.benzerlik)}</b> benziyor.</p>
+                <div className="olcek" aria-hidden="true">
+                  <span style={{ width: `${Math.min(s.benzerlik, 100)}%` }} />
+                </div>
+                <p className="olcek-yazi"><span>{s.sanatci}</span><span>Dua Lipa</span></p>
+                <button className="ana" onClick={sonraki}>{tur + 1 < SARKILAR.length ? "Sıradaki plak →" : "Sonucu gör →"}</button>
+              </div>
+            )}
+          </section>
+        )}
+
+        {ekran === "son" && (
+          <section className="son">
+            <p className="ust-yazi">Sonuç</p>
+            <p className="skor">{skor}<span>/{SARKILAR.length}</span></p>
+            <p className="son-metin">{skor === 3 ? "Kulağın keskin. Yapay zekâ seni kandıramadı." : skor === 0 ? "Yapay zekâ seni her seferinde kandırdı." : "Yapay zekâ seni bazen kandırdı."}</p>
+            <p className="son-alt">Bu sesleri yapan ben bile Simge ile yapay zekâ Dua Lipa'yı kulakla zor ayırt ettim.</p>
+            <button className="ana" onClick={basla}>Tekrar oyna ↻</button>
+
+            <h2 className="raf-baslik">Raf</h2>
+            <ul className="raf">
+              {SARKILAR.map((x) => (
+                <li key={x.id}>
+                  <div className="raf-yazi">
+                    <b>“{x.sarki}”</b>
+                    <span>{x.sanatci} · Dua Lipa klonu {yuzde(x.benzerlik)}</span>
+                    <small>{ETIKET}</small>
+                  </div>
+                  <div className="raf-plaklar">
+                    <Plak kucuk src={klip(x, false)} harf="Orj" renk="var(--b)" oynayan={oynayan} setOynayan={setOynayan} />
+                    <Plak kucuk src={klip(x, true)} harf="AI" renk="var(--ai)" oynayan={oynayan} setOynayan={setOynayan} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </main>
+
+      <footer className="alt">
+        <p>
+          Şarkılar: Simge Sağın “Üzülmedin mi”, Hadise “Sıfır Tolerans” ve “Düm Tek Tek” · Klonlanan ses: Dua Lipa · haklar sahiplerine aittir
+        </p>
+        <details>
+          <summary>Ayrıntılar</summary>
+          <p>Ses modeli RVC v2 (Applio), Dua Lipa'nın <i>Future Nostalgia</i> (2020) kayıtlarından ayrılmış ~15 dk vokalle eğitildi.
+            Benzerlik: ECAPA ses parmak izi, %0 = orijinal şarkıcı, %100 = Dua Lipa'nın kendi kaydı.
+            Model ve tam şarkılar yayınlanmaz; sitede yalnızca 30 saniyelik klipler var.
+            Exposure AI Academy ders projesi, eğitim amaçlı, ticari değil.</p>
+        </details>
+        <p>Zehra Karadayı · <a href={REPO}>GitHub</a></p>
       </footer>
-    </main>
+    </>
   );
 }

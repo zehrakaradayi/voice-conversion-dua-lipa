@@ -1,4 +1,8 @@
+import { Manrope, Unbounded } from "next/font/google";
 import "./globals.css";
+
+const baslik = Unbounded({ subsets: ["latin", "latin-ext"], weight: ["600", "700", "800", "900"], variable: "--font-baslik" });
+const govde = Manrope({ subsets: ["latin", "latin-ext"], variable: "--font-govde" });
 
 export const metadata = {
   title: "Kim söylüyor? — Dua Lipa ses klonu",
@@ -6,11 +10,11 @@ export const metadata = {
   robots: { index: false, follow: false, googleBot: { index: false, follow: false } },
 };
 
-export const viewport = { width: "device-width", initialScale: 1 };
+export const viewport = { width: "device-width", initialScale: 1, themeColor: "#0c0a0f" };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="tr">
+    <html lang="tr" className={`${baslik.variable} ${govde.variable}`}>
       <body>{children}</body>
     </html>
   );
